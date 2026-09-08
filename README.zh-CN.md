@@ -1,5 +1,19 @@
 # luci-app-linkspeed
 
+## 界面预览
+
+### 测速配置
+
+![测速配置界面](docs/images/test-interface.png)
+
+### 实时速度曲线
+
+![测速中实时曲线](docs/images/test-running.png)
+
+### 测速结果与历史曲线
+
+![测速完成及历史曲线](docs/images/test-completed.png)
+
 中文 | [English](README.md)
 
 运行在 OpenWrt/ImmortalWrt 路由器端的 LuCI 公网测速插件。
