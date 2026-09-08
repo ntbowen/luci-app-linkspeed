@@ -1,0 +1,21 @@
+#!/bin/sh
+
+pidfile="/var/run/linkspeed-test.pids"
+[ -f "$pidfile" ] || {
+	echo '{"stopped":false,"message":"没有正在运行的测速任务"}'
+	exit 0
+}
+
+stopped=0
+while IFS= read -r pid; do
+	case "$pid" in
+		''|*[!0-9]*) continue ;;
+	esac
+	if kill -0 "$pid" 2>/dev/null; then
+		kill "$pid" 2>/dev/null || true
+		stopped=$((stopped + 1))
+	fi
+done < "$pidfile"
+rm -f "$pidfile"
+printf '{"stopped":true,"processes":%s}\n' "$stopped"
+

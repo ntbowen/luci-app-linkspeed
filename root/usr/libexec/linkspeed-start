@@ -1,0 +1,29 @@
+#!/bin/sh
+
+job_id="$1"
+program="$2"
+history_limit="$3"
+shift 3
+
+case "$job_id" in ''|*[!0-9]*) echo '任务编号无效' >&2; exit 2 ;; esac
+case "$program" in
+	linkspeed-test|linkspeed-test-multi|linkspeed-upload-multi|linkspeed-duplex) ;;
+	*) echo '测速程序无效' >&2; exit 2 ;;
+esac
+case "$history_limit" in ''|*[!0-9]*) echo '历史保留数量无效' >&2; exit 2 ;; esac
+[ "$history_limit" -ge 1 ] && [ "$history_limit" -le 200 ] || { echo '历史保留范围为 1–200 次' >&2; exit 2; }
+if [ "$(uci -q get linkspeed.config.history_limit)" != "$history_limit" ]; then
+	uci set linkspeed.config.history_limit="$history_limit"
+	uci commit linkspeed
+fi
+
+jobdir="/tmp/linkspeed-job-$job_id"
+mkdir -p "$jobdir" || exit 1
+printf '%s\n' running > "$jobdir/state"
+: > "$jobdir/output"
+: > "$jobdir/error"
+
+/sbin/start-stop-daemon -S -b -q -m -p "$jobdir/worker.pid" -x /usr/libexec/linkspeed-worker -- \
+	"$job_id" "$program" "$history_limit" "$@"
+
+printf '%s\n' "$job_id"

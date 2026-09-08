@@ -1,0 +1,19 @@
+#!/bin/sh
+
+history_dir="/overlay/linkspeed-history"
+action="$1"
+case "$action" in
+	list)
+		for file in $(ls -1t "$history_dir"/*.log 2>/dev/null); do
+			meta="$(sed -n '1p' "$file")"
+			points="$(grep -c '^S|' "$file")"
+			printf '%s|%s\n' "$meta" "$points"
+		done
+		;;
+	detail)
+		job_id="$2"
+		case "$job_id" in ''|*[!0-9]*) exit 2 ;; esac
+		cat "$history_dir/$job_id.log"
+		;;
+	*) exit 2 ;;
+esac

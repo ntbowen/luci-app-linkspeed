@@ -1,0 +1,22 @@
+{
+	"luci-app-linkspeed": {
+		"description": "Grant access to the selectable link speed test",
+		"read": {
+			"uci": [ "linkspeed" ]
+		},
+		"write": {
+			"uci": [ "linkspeed" ],
+			"file": {
+				"/usr/libexec/linkspeed-history": [ "exec" ],
+				"/usr/libexec/linkspeed-start": [ "exec" ],
+				"/usr/libexec/linkspeed-status": [ "exec" ],
+				"/usr/libexec/linkspeed-test": [ "exec" ],
+				"/usr/libexec/linkspeed-test-multi": [ "exec" ],
+				"/usr/libexec/linkspeed-upload": [ "exec" ],
+				"/usr/libexec/linkspeed-upload-multi": [ "exec" ],
+				"/usr/libexec/linkspeed-duplex": [ "exec" ],
+				"/usr/libexec/linkspeed-stop": [ "exec" ]
+			}
+		}
+	}
+}

@@ -1,0 +1,48 @@
+#!/bin/sh
+
+url="$1"
+duration="${2:-15}"
+max_mb="${3:-100}"
+
+case "$url" in
+	http://*|https://*) ;;
+	*) echo '上传地址必须以 http:// 或 https:// 开头' >&2; exit 2 ;;
+esac
+case "$duration:$max_mb" in
+	*[!0-9:]*) echo '测速参数必须是整数' >&2; exit 2 ;;
+esac
+[ "$duration" -ge 3 ] && [ "$duration" -le 86400 ] || exit 2
+[ "$max_mb" -ge 0 ] || exit 2
+
+count_arg=""
+[ "$max_mb" -gt 0 ] && count_arg="count=$((max_mb * 16))"
+pidfile="${LINKSPEED_PIDFILE:-/var/run/linkspeed-test.pids}"
+tmpbase="/tmp/linkspeed-upload.$$"
+[ "${LINKSPEED_SHARED:-0}" = "1" ] || : > "$pidfile"
+
+cleanup() {
+	rm -f "$tmpbase.out" "$tmpbase.err"
+	[ "${LINKSPEED_SHARED:-0}" = "1" ] || rm -f "$pidfile"
+}
+trap cleanup EXIT INT TERM
+
+dd if=/dev/zero bs=65536 $count_arg 2>/dev/null | \
+	(ulimit -v 65536 2>/dev/null; exec curl --silent --show-error --connect-timeout 10 --max-time "$duration" \
+	-H 'Content-Type: application/octet-stream' -H 'Expect:' -H 'Transfer-Encoding: chunked' \
+	--request POST --upload-file - \
+	--output /dev/null \
+	--write-out '%{http_code}|%{remote_ip}|%{size_upload}|%{speed_upload}|%{time_namelookup}|%{time_connect}|%{time_starttransfer}|%{time_total}' \
+	--url "$url") >"$tmpbase.out" 2>"$tmpbase.err" &
+upload_pid=$!
+printf '%s\n%s\n' "$upload_pid" "$$" >> "$pidfile"
+wait "$upload_pid"
+curl_code=$?
+result="$(cat "$tmpbase.out")"
+
+if [ -n "$result" ]; then
+	printf '%s\n' "$result"
+	exit 0
+fi
+echo "curl 上传测速失败（代码 $curl_code）" >&2
+cat "$tmpbase.err" >&2
+exit "$curl_code"

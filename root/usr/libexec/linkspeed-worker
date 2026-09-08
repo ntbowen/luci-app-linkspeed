@@ -1,0 +1,52 @@
+#!/bin/sh
+
+exec </dev/null >/dev/null 2>&1
+
+job_id="$1"
+program="$2"
+history_limit="$3"
+shift 3
+jobdir="/tmp/linkspeed-job-$job_id"
+
+started="$(date +%s)"
+samples="$jobdir/samples"
+: > "$samples"
+prev_rx="$(cat /sys/class/net/wwan0/statistics/rx_bytes 2>/dev/null || echo 0)"
+prev_tx="$(cat /sys/class/net/wwan0/statistics/tx_bytes 2>/dev/null || echo 0)"
+prev_time="$started"
+
+"/usr/libexec/$program" "$@" > "$jobdir/output" 2> "$jobdir/error" &
+test_pid=$!
+while kill -0 "$test_pid" 2>/dev/null; do
+	sleep 1
+	now="$(date +%s)"
+	rx="$(cat /sys/class/net/wwan0/statistics/rx_bytes 2>/dev/null || echo "$prev_rx")"
+	tx="$(cat /sys/class/net/wwan0/statistics/tx_bytes 2>/dev/null || echo "$prev_tx")"
+	dt=$((now - prev_time)); [ "$dt" -gt 0 ] || dt=1
+	printf 'S|%s|%s|%s|%s\n' "$now" "$dt" "$((rx - prev_rx))" "$((tx - prev_tx))" >> "$samples"
+	prev_rx="$rx"; prev_tx="$tx"; prev_time="$now"
+done
+wait "$test_pid"
+test_code=$?
+ended="$(date +%s)"
+
+if [ "$test_code" -eq 0 ]; then
+	printf '%s\n' done > "$jobdir/state"
+else
+	printf '%s\n' error > "$jobdir/state"
+fi
+
+history_dir="/overlay/linkspeed-history"
+mkdir -p "$history_dir"
+history_tmp="$history_dir/$job_id.log.tmp"
+{
+	printf 'M|%s|%s|%s|%s|%s\n' "$job_id" "$program" "$started" "$ended" "$test_code"
+	cat "$samples"
+	printf 'R|'; tr '\n' ' ' < "$jobdir/output"; printf '\n'
+} > "$history_tmp" && mv "$history_tmp" "$history_dir/$job_id.log"
+
+count=0
+for old in $(ls -1t "$history_dir"/*.log 2>/dev/null); do
+	count=$((count + 1))
+	[ "$count" -le "$history_limit" ] || rm -f "$old"
+done

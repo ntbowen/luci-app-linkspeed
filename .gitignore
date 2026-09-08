@@ -1,0 +1,7 @@
+*.ipk
+*.apk
+*.tar.gz
+.DS_Store
+Thumbs.db
+build/
+bin/

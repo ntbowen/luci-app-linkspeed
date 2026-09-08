@@ -1,0 +1,35 @@
+#!/bin/sh
+
+duration="${1:-15}"
+max_total_mb="${2:-100}"
+url="$3"
+connections="${4:-5}"
+case "$connections" in ''|*[!0-9]*) exit 2 ;; esac
+[ "$connections" -ge 1 ] && [ "$connections" -le 10 ] || exit 2
+
+per_mb=$(( (max_total_mb + connections - 1) / connections ))
+tmpdir="/tmp/linkspeed-upload-multi.$$"
+pidfile="${LINKSPEED_PIDFILE:-/var/run/linkspeed-test.pids}"
+mkdir -p "$tmpdir" || exit 1
+[ "${LINKSPEED_SHARED:-0}" = "1" ] || : > "$pidfile"
+export LINKSPEED_PIDFILE="$pidfile"
+export LINKSPEED_SHARED=1
+cleanup() {
+	rm -rf "$tmpdir"
+	[ "${LINKSPEED_PARENT_SHARED:-0}" = "1" ] || rm -f "$pidfile"
+}
+trap cleanup EXIT INT TERM
+
+i=0
+while [ "$i" -lt "$connections" ]; do
+	i=$((i + 1))
+	/usr/libexec/linkspeed-upload "$url" "$duration" "$per_mb" >"$tmpdir/$i.out" 2>"$tmpdir/$i.err" &
+done
+wait
+
+i=0
+while [ "$i" -lt "$connections" ]; do
+	i=$((i + 1))
+	if [ -s "$tmpdir/$i.out" ]; then cat "$tmpdir/$i.out"; else printf '%s\n' '0||0|0|0|0|0|0'; fi
+done
+

@@ -1,0 +1,59 @@
+#!/bin/sh
+
+url="$1"
+duration="${2:-15}"
+max_mb="${3:-100}"
+
+case "$url" in
+	http://*|https://*) ;;
+	*) echo '测速地址必须以 http:// 或 https:// 开头' >&2; exit 2 ;;
+esac
+
+case "$duration" in
+	''|*[!0-9]*) echo '测速时长必须是整数' >&2; exit 2 ;;
+esac
+case "$max_mb" in
+	''|*[!0-9]*) echo '最大下载量必须是整数' >&2; exit 2 ;;
+esac
+
+[ "$duration" -ge 3 ] && [ "$duration" -le 86400 ] || {
+	echo '测速时长范围为 3–86400 秒' >&2
+	exit 2
+}
+[ "$max_mb" -ge 0 ] || {
+	echo '最大下载量必须大于或等于 0 MB' >&2
+	exit 2
+}
+
+range_arg=""
+[ "$max_mb" -gt 0 ] && range_arg="--range 0-$((max_mb * 1024 * 1024 - 1))"
+pidfile="${LINKSPEED_PIDFILE:-/var/run/linkspeed-test.pids}"
+tmpbase="/tmp/linkspeed-test.$$"
+[ "${LINKSPEED_SHARED:-0}" = "1" ] || : > "$pidfile"
+
+cleanup() {
+	rm -f "$tmpbase.out" "$tmpbase.err"
+	[ "${LINKSPEED_SHARED:-0}" = "1" ] || rm -f "$pidfile"
+}
+trap cleanup EXIT INT TERM
+
+curl --location --silent --show-error \
+	--connect-timeout 10 --max-time "$duration" \
+	$range_arg --output /dev/null \
+	--write-out '%{http_code}|%{remote_ip}|%{size_download}|%{speed_download}|%{time_namelookup}|%{time_connect}|%{time_starttransfer}|%{time_total}' \
+	--url "$url" >"$tmpbase.out" 2>"$tmpbase.err" &
+curl_pid=$!
+printf '%s\n%s\n' "$curl_pid" "$$" >> "$pidfile"
+wait "$curl_pid"
+curl_code=$?
+result="$(cat "$tmpbase.out")"
+
+# curl 在达到 --max-time 时返回 28，但此时统计数据仍然有效。
+if [ -n "$result" ]; then
+	printf '%s\n' "$result"
+	exit 0
+fi
+
+echo "curl 测速失败（代码 $curl_code）" >&2
+cat "$tmpbase.err" >&2
+exit "$curl_code"

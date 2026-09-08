@@ -1,0 +1,8 @@
+{
+	"admin/status/linkspeed": {
+		"title": "Network Speed Test",
+		"order": 85,
+		"action": { "type": "view", "path": "linkspeed/main" },
+		"depends": { "acl": [ "luci-app-linkspeed" ] }
+	}
+}
