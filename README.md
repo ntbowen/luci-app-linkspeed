@@ -1,4 +1,4 @@
-# luci-app-linkspeed
+# luci-app-linkspeed — OpenWrt 实时网速监控插件
 
 ## Screenshots
 
