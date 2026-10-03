@@ -85,16 +85,29 @@ return view.extend({
 
 		var live = null;
 
+		function fitCanvas(canvas, maxWidth, height) {
+			var dpr = window.devicePixelRatio || 1;
+			var cssWidth = canvas.clientWidth || maxWidth;
+			var pw = Math.round(cssWidth * dpr), ph = Math.round(height * dpr);
+			if (canvas.width !== pw || canvas.height !== ph) {
+				canvas.width = pw;
+				canvas.height = ph;
+				canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+			}
+			return { ctx: canvas.getContext('2d'), w: cssWidth, h: height };
+		}
+
 		function beginLiveChart() {
 			var stats = E('p', { 'style': 'font-size:1.15em;font-weight:bold' }, _('Waiting for the first sample...'));
 			var summary = E('p', {}, '');
-			var canvas = E('canvas', { 'width': '640', 'height': '220', 'style': 'width:100%;max-width:900px;height:220px;background:#202020;border-radius:4px' });
+			var canvas = E('canvas', { 'style': 'width:100%;max-width:900px;height:220px;background:#202020;border-radius:4px' });
 			result.innerHTML = '';
 			result.appendChild(E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, _('WAN Live Speed (per-second sampling)')),
 				stats, summary, canvas,
 				E('p', { 'class': 'cbi-value-description' }, _('Purple: download') + '  ' + _('Cyan: upload') + '  ' + _('Source: WAN interface byte counters'))
 			]));
+			fitCanvas(canvas, 900, 220);
 			live = { stats: stats, summary: summary, canvas: canvas, previous: null, samples: [] };
 		}
 
@@ -114,7 +127,7 @@ return view.extend({
 				});
 				live.stats.textContent = _('Download:') + ' ' + down.toFixed(2) + ' Mbps  ' + _('Upload:') + ' ' + up.toFixed(2) + ' Mbps';
 				live.summary.textContent = _('Average:') + ' ' + (sumDown / live.samples.length).toFixed(2) + ' / ' + (sumUp / live.samples.length).toFixed(2) + ' Mbps  ' + _('Peak:') + ' ' + peakDown.toFixed(2) + ' / ' + peakUp.toFixed(2) + ' Mbps';
-				var ctx = live.canvas.getContext('2d'), w = live.canvas.width, h = live.canvas.height;
+				var fit = fitCanvas(live.canvas, 900, 220), ctx = fit.ctx, w = fit.w, h = fit.h;
 				var max = Math.max(10, peakDown, peakUp) * 1.1;
 				ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
 				for (var g = 1; g < 4; g++) { ctx.beginPath(); ctx.moveTo(0, h * g / 4); ctx.lineTo(w, h * g / 4); ctx.stroke(); }
@@ -124,7 +137,8 @@ return view.extend({
 					ctx.stroke();
 				}
 				line('down', '#9b87f5'); line('up', '#58d5d2');
-				ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(max.toFixed(0) + ' Mbps', 8, 15); ctx.fillText(_('Last 600 s max'), w - 110, h - 8);
+				ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(max.toFixed(0) + ' Mbps', 8, 15);
+				ctx.textAlign = 'right'; ctx.fillText(_('Last 600 s max'), w - 8, h - 8); ctx.textAlign = 'left';
 			}
 			live.previous = { rx: rx, tx: tx, time: now };
 		}
@@ -347,7 +361,7 @@ return view.extend({
 				if (!points.length) throw new Error(_('This record has no speed samples'));
 				var peakDown = 0, peakUp = 0, sumDown = 0, sumUp = 0;
 				points.forEach(function(p) { peakDown = Math.max(peakDown, p.down); peakUp = Math.max(peakUp, p.up); sumDown += p.down; sumUp += p.up; });
-				var canvas = E('canvas', { 'width': '900', 'height': '320', 'style': 'width:100%;max-width:1000px;height:320px;background:#202020;border-radius:4px;cursor:crosshair' });
+				var canvas = E('canvas', { 'style': 'width:100%;max-width:1000px;height:320px;background:#202020;border-radius:4px;cursor:crosshair' });
 				var pointInfo = E('p', { 'style': 'min-height:1.5em;font-weight:bold;color:#ddd' }, _('Click the curve to inspect a specific second.'));
 				historyResult.innerHTML = '';
 				historyResult.appendChild(E('div', {}, [
@@ -356,19 +370,28 @@ return view.extend({
 					canvas, pointInfo,
 					E('p', { 'class': 'cbi-value-description' }, _('Purple: download') + '  ' + _('Cyan: upload') + '  ' + _('Each raw point is a 1-second sample; long records are downsampled only when drawing.'))
 				]));
-				var ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height, pad = 34;
-				var max = Math.max(10, peakDown, peakUp) * 1.1, step = Math.max(1, Math.ceil(points.length / 1200)), drawn = [];
-				for (var i = 0; i < points.length; i += step) {
-					var end = Math.min(i + step, points.length), d = 0, u = 0;
-					for (var j = i; j < end; j++) { d += points[j].down; u += points[j].up; }
-					drawn.push({ down: d / (end - i), up: u / (end - i) });
+				var pad = 34, ctx, w, h, max, baseChart;
+				function repaint() {
+					if (!canvas.isConnected) { window.removeEventListener('resize', repaint); return; }
+					var fit = fitCanvas(canvas, 1000, 320);
+					ctx = fit.ctx; w = fit.w; h = fit.h;
+					max = Math.max(10, peakDown, peakUp) * 1.1;
+					var step = Math.max(1, Math.ceil(points.length / 1200)), drawn = [];
+					for (var i = 0; i < points.length; i += step) {
+						var end = Math.min(i + step, points.length), d = 0, u = 0;
+						for (var j = i; j < end; j++) { d += points[j].down; u += points[j].up; }
+						drawn.push({ down: d / (end - i), up: u / (end - i) });
+					}
+					ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+					for (var g = 0; g <= 4; g++) { var y = pad + (h - pad * 2) * g / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke(); }
+					function draw(key, color) { ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2; drawn.forEach(function(p, n) { var x = pad + (drawn.length > 1 ? n * (w - pad * 2) / (drawn.length - 1) : 0), y = h - pad - p[key] / max * (h - pad * 2); if (n) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); }
+					draw('down', '#9b87f5'); draw('up', '#58d5d2');
+					ctx.fillStyle = '#ddd'; ctx.font = '13px sans-serif'; ctx.fillText(max.toFixed(0) + ' Mbps', 4, pad); ctx.fillText('0', 18, h - pad); ctx.fillText(new Date(points[0].time * 1000).toLocaleTimeString(), pad, h - 8);
+					ctx.textAlign = 'right'; ctx.fillText(new Date(points[points.length - 1].time * 1000).toLocaleTimeString(), w - 8, h - 8); ctx.textAlign = 'left';
+					baseChart = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				}
-				ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
-				for (var g = 0; g <= 4; g++) { var y = pad + (h - pad * 2) * g / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke(); }
-				function draw(key, color) { ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2; drawn.forEach(function(p, n) { var x = pad + (drawn.length > 1 ? n * (w - pad * 2) / (drawn.length - 1) : 0), y = h - pad - p[key] / max * (h - pad * 2); if (n) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); }
-				draw('down', '#9b87f5'); draw('up', '#58d5d2');
-				ctx.fillStyle = '#ddd'; ctx.font = '13px sans-serif'; ctx.fillText(max.toFixed(0) + ' Mbps', 4, pad); ctx.fillText('0', 18, h - pad); ctx.fillText(new Date(points[0].time * 1000).toLocaleTimeString(), pad, h - 8); ctx.fillText(new Date(points[points.length - 1].time * 1000).toLocaleTimeString(), w - 105, h - 8);
-				var baseChart = ctx.getImageData(0, 0, w, h);
+				window.addEventListener('resize', repaint);
+				repaint();
 				canvas.addEventListener('click', function(ev) {
 					var rect = canvas.getBoundingClientRect();
 					var ratio = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
