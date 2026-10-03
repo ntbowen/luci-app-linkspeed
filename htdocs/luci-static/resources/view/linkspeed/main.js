@@ -19,8 +19,8 @@ return view.extend({
 		if (!Array.isArray(cnUrls)) cnUrls = [ cnUrls ];
 		if (!Array.isArray(globalUrls)) globalUrls = [ globalUrls ];
 		var profile = E('select', { 'class': 'cbi-input-select' }, [
-			E('option', { 'value': 'cn' }, _('中国内地节点')),
-			E('option', { 'value': 'global' }, _('海外节点'))
+			E('option', { 'value': 'cn' }, _('China mainland nodes')),
+			E('option', { 'value': 'global' }, _('Global nodes'))
 		]);
 		var cnUploadUrl = uci.get('linkspeed', 'config', 'cn_upload_url') || uci.get('linkspeed', 'config', 'upload_url') || 'https://test.nju.edu.cn/backend/empty.php';
 		var globalUploadUrl = uci.get('linkspeed', 'config', 'global_upload_url') || cnUploadUrl;
@@ -32,7 +32,7 @@ return view.extend({
 		function refreshTargets() {
 			selected.innerHTML = '';
 			activeUrls().forEach(function(url, index) { selected.appendChild(E('option', { 'value': url }, (index + 1) + '. ' + url)); });
-			selected.appendChild(E('option', { 'value': '__custom__' }, _('自定义临时链接')));
+			selected.appendChild(E('option', { 'value': '__custom__' }, _('Custom temporary link')));
 		}
 		profile.addEventListener('change', refreshTargets);
 		refreshTargets();
@@ -52,13 +52,13 @@ return view.extend({
 		var maxMbHint = E('div', {
 			'class': 'cbi-value-description',
 			'style': 'max-width:52em;line-height:1.55'
-		}, _('填写 0 表示不限制流量，仅按测速时长停止。正数是每个方向的总流量上限，五路并发会平均分配；上下行同时测速会分别计算。'));
+		}, _('Enter 0 for unlimited traffic; the test stops when the time limit is reached. A positive value caps the total traffic per direction and is split evenly across the concurrent connections; download and upload are counted separately in duplex mode.'));
 		var historyLimit = E('input', {
 			'class': 'cbi-input-text', 'type': 'number', 'min': '1', 'max': '200', 'value': '20'
 		});
-		var historyResult = E('div', {}, _('点击“刷新历史”读取已保存记录。'));
+		var historyResult = E('div', {}, _('Click "Refresh history" to load saved records.'));
 		var result = E('div', { 'class': 'cbi-section' }, [
-			E('div', { 'class': 'alert-message notice' }, _('尚未开始测速。'))
+			E('div', { 'class': 'alert-message notice' }, _('No speed test has been run yet.'))
 		]);
 
 		function setStatus(text, style) {
@@ -73,27 +73,27 @@ return view.extend({
 
 		function confirmLongTest(mode) {
 			var seconds = Number(duration.value);
-			var traffic = Number(maxMb.value) === 0 ? _('无限制（需手动停止或等待最长时间结束）') : maxMb.value + ' MB';
+			var traffic = Number(maxMb.value) === 0 ? _('Unlimited (stop manually or wait for the time limit)') : maxMb.value + ' MB';
 			return window.confirm(
-				_('即将开始测速/压力测试。') + '\n\n' +
-				_('模式：') + mode + '\n' +
-				_('最长时间：') + seconds + _(' 秒') + '\n' +
-				_('每方向最大总流量：') + traffic + '\n\n' +
-				_('测试会持续占用 WAN 带宽，并可能产生大量移动数据。确定继续吗？')
+				_('A speed test / stress test is about to start.') + '\n\n' +
+				_('Mode:') + ' ' + mode + '\n' +
+				_('Max duration: %d seconds').format(seconds) + '\n' +
+				_('Max traffic per direction:') + ' ' + traffic + '\n\n' +
+				_('The test will keep using WAN bandwidth and may consume a large amount of metered data. Continue?')
 			);
 		}
 
 		var live = null;
 
 		function beginLiveChart() {
-			var stats = E('p', { 'style': 'font-size:1.15em;font-weight:bold' }, _('等待第一秒采样……'));
+			var stats = E('p', { 'style': 'font-size:1.15em;font-weight:bold' }, _('Waiting for the first sample...'));
 			var summary = E('p', {}, '');
 			var canvas = E('canvas', { 'width': '640', 'height': '220', 'style': 'width:100%;max-width:900px;height:220px;background:#202020;border-radius:4px' });
 			result.innerHTML = '';
 			result.appendChild(E('div', { 'class': 'cbi-section' }, [
-				E('h3', {}, _('WAN 实时速度（每秒采样）')),
+				E('h3', {}, _('WAN Live Speed (per-second sampling)')),
 				stats, summary, canvas,
-				E('p', { 'class': 'cbi-value-description' }, _('紫色：下载　青色：上传　数据来源：wwan0 接口字节计数'))
+				E('p', { 'class': 'cbi-value-description' }, _('Purple: download') + '  ' + _('Cyan: upload') + '  ' + _('Source: WAN interface byte counters'))
 			]));
 			live = { stats: stats, summary: summary, canvas: canvas, previous: null, samples: [] };
 		}
@@ -112,8 +112,8 @@ return view.extend({
 					peakDown = Math.max(peakDown, s.down); peakUp = Math.max(peakUp, s.up);
 					sumDown += s.down; sumUp += s.up;
 				});
-				live.stats.textContent = _('当前下载：') + down.toFixed(2) + ' Mbps　' + _('当前上传：') + up.toFixed(2) + ' Mbps';
-				live.summary.textContent = _('平均：') + (sumDown / live.samples.length).toFixed(2) + ' / ' + (sumUp / live.samples.length).toFixed(2) + ' Mbps　' + _('峰值：') + peakDown.toFixed(2) + ' / ' + peakUp.toFixed(2) + ' Mbps';
+				live.stats.textContent = _('Download:') + ' ' + down.toFixed(2) + ' Mbps  ' + _('Upload:') + ' ' + up.toFixed(2) + ' Mbps';
+				live.summary.textContent = _('Average:') + ' ' + (sumDown / live.samples.length).toFixed(2) + ' / ' + (sumUp / live.samples.length).toFixed(2) + ' Mbps  ' + _('Peak:') + ' ' + peakDown.toFixed(2) + ' / ' + peakUp.toFixed(2) + ' Mbps';
 				var ctx = live.canvas.getContext('2d'), w = live.canvas.width, h = live.canvas.height;
 				var max = Math.max(10, peakDown, peakUp) * 1.1;
 				ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
@@ -124,7 +124,7 @@ return view.extend({
 					ctx.stroke();
 				}
 				line('down', '#9b87f5'); line('up', '#58d5d2');
-				ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(max.toFixed(0) + ' Mbps', 8, 15); ctx.fillText(_('最近最多 600 秒'), w - 110, h - 8);
+				ctx.fillStyle = '#ddd'; ctx.font = '12px sans-serif'; ctx.fillText(max.toFixed(0) + ' Mbps', 8, 15); ctx.fillText(_('Last 600 s max'), w - 110, h - 8);
 			}
 			live.previous = { rx: rx, tx: tx, time: now };
 		}
@@ -147,7 +147,7 @@ return view.extend({
 							else if (state === 'DONE')
 								resolve({ stdout: body });
 							else
-								reject(new Error(body.trim() || _('测速任务失败')));
+								reject(new Error(body.trim() || _('Speed test job failed')));
 						}).catch(reject);
 					}
 					poll();
@@ -158,7 +158,7 @@ return view.extend({
 		function parseMetrics(line) {
 			var fields = String(line || '').trim().split('|');
 			if (fields.length !== 8)
-				throw new Error(_('测速程序返回的数据格式无效'));
+				throw new Error(_('Invalid data format returned by the test program'));
 			return {
 				http_code: Number(fields[0] || 0),
 				remote_ip: fields[1] || '',
@@ -175,28 +175,28 @@ return view.extend({
 			var runId = ++activeRun;
 			var url = selected.value === '__custom__' ? custom.value.trim() : selected.value;
 			if (!/^https?:\/\//i.test(url)) {
-				setStatus(_('请输入有效的 HTTP/HTTPS 直链。'), 'error');
+				setStatus(_('Please enter a valid HTTP/HTTPS direct link.'), 'error');
 				return;
 			}
 			if (!validNumber(duration, 3, 86400) || !validNumber(maxMb, 0, Number.MAX_SAFE_INTEGER)) {
-				setStatus(_('请检查测速时长和最大下载量。'), 'error');
+				setStatus(_('Please check the test duration and max download size.'), 'error');
 				return;
 			}
-			if (!confirmLongTest(_('单节点下载'))) return;
-			setStatus(_('单节点测速中，可随时点击“立即停止”……'), 'notice');
+			if (!confirmLongTest(_('Single-node download'))) return;
+			setStatus(_('Single-node test running; click "Stop now" at any time...'), 'notice');
 			runJob('linkspeed-test', [ url, duration.value, maxMb.value ]).then(function(res) {
 				if (runId !== activeRun) return;
 				var data = parseMetrics(res.stdout);
 				var mbps = Number(data.speed_download || 0) * 8 / 1000000;
 				result.innerHTML = '';
 				result.appendChild(E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('单节点结果')),
+					E('h3', {}, _('Single-node Result')),
 					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, mbps.toFixed(2) + ' Mbps (' + (mbps / 8).toFixed(2) + ' MB/s)'),
-					E('p', {}, _('下载量：') + (Number(data.size_download || 0) / 1048576).toFixed(2) + ' MiB'),
-					E('p', {}, 'HTTP ' + data.http_code + '　TTFB ' + (Number(data.time_starttransfer || 0) * 1000).toFixed(1) + ' ms　IP ' + (data.remote_ip || '-'))
+					E('p', {}, _('Downloaded:') + ' ' + (Number(data.size_download || 0) / 1048576).toFixed(2) + ' MiB'),
+					E('p', {}, 'HTTP ' + data.http_code + '  TTFB ' + (Number(data.time_starttransfer || 0) * 1000).toFixed(1) + ' ms  IP ' + (data.remote_ip || '-'))
 				]));
 			}).catch(function(err) {
-				if (runId === activeRun) setStatus(_('测速失败：') + String(err.message || err), 'error');
+				if (runId === activeRun) setStatus(_('Test failed:') + ' ' + String(err.message || err), 'error');
 			});
 		}
 
@@ -204,11 +204,11 @@ return view.extend({
 			var runId = ++activeRun;
 			var targets = activeUrls().slice(0, 5);
 			if (targets.length < 2 || !validNumber(duration, 3, 86400) || !validNumber(maxMb, 0, Number.MAX_SAFE_INTEGER)) {
-				setStatus(_('节点数量或测速参数无效。'), 'error');
+				setStatus(_('Invalid node count or test parameters.'), 'error');
 				return;
 			}
-			if (!confirmLongTest(_('五节点并发下载'))) return;
-			setStatus(_('五节点并发测速中，可随时点击“立即停止”……'), 'notice');
+			if (!confirmLongTest(_('5-node concurrent download'))) return;
+			setStatus(_('5-node concurrent test running; click "Stop now" at any time...'), 'notice');
 			runJob('linkspeed-test-multi', [ duration.value, maxMb.value ].concat(targets)).then(function(res) {
 				if (runId !== activeRun) return;
 				var results = (res.stdout || '').trim().split(/\n+/).map(parseMetrics);
@@ -226,26 +226,26 @@ return view.extend({
 				var mbps = elapsed > 0 ? bytes * 8 / elapsed / 1000000 : 0;
 				result.innerHTML = '';
 				result.appendChild(E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('五节点聚合结果')),
+					E('h3', {}, _('5-node Aggregate Result')),
 					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, mbps.toFixed(2) + ' Mbps (' + (mbps / 8).toFixed(2) + ' MB/s)'),
-					E('p', {}, _('总下载量：') + (bytes / 1048576).toFixed(2) + ' MiB'),
+					E('p', {}, _('Total downloaded:') + ' ' + (bytes / 1048576).toFixed(2) + ' MiB'),
 					E('table', { 'class': 'table' }, [
-						E('tr', { 'class': 'tr table-titles' }, [ E('th', {}, '#'), E('th', {}, _('节点')), E('th', {}, _('速度')), E('th', {}, 'HTTP'), E('th', {}, 'TTFB') ])
+						E('tr', { 'class': 'tr table-titles' }, [ E('th', {}, '#'), E('th', {}, _('Node')), E('th', {}, _('Speed')), E('th', {}, 'HTTP'), E('th', {}, 'TTFB') ])
 					].concat(rows))
 				]));
 			}).catch(function(err) {
-				if (runId === activeRun) setStatus(_('并发测速失败：') + String(err.message || err), 'error');
+				if (runId === activeRun) setStatus(_('Concurrent test failed:') + ' ' + String(err.message || err), 'error');
 			});
 		}
 
 		function runUpload() {
 			var runId = ++activeRun;
 			if (!validNumber(duration, 3, 86400) || !validNumber(maxMb, 0, Number.MAX_SAFE_INTEGER)) {
-				setStatus(_('请检查测速时长和每方向最大流量。'), 'error');
+				setStatus(_('Please check the test duration and max traffic per direction.'), 'error');
 				return;
 			}
-			if (!confirmLongTest(_('五路并发上传'))) return;
-			setStatus(_('三路上传测速中，可随时点击“立即停止”……'), 'notice');
+			if (!confirmLongTest(_('3-way concurrent upload'))) return;
+			setStatus(_('3-way upload test running; click "Stop now" at any time...'), 'notice');
 			runJob('linkspeed-upload-multi', [ duration.value, maxMb.value, activeUploadUrl(), '3' ]).then(function(res) {
 				if (runId !== activeRun) return;
 				var results = (res.stdout || '').trim().split(/\n+/).map(parseMetrics);
@@ -256,21 +256,21 @@ return view.extend({
 					return E('tr', {}, [
 						E('td', {}, String(index + 1)),
 						E('td', {}, (Number(item.speed_download || 0) * 8 / 1000000).toFixed(2) + ' Mbps'),
-						E('td', {}, item.http_code ? String(item.http_code) : _('限时结束')),
+						E('td', {}, item.http_code ? String(item.http_code) : _('Time limit reached')),
 						E('td', {}, (Number(item.time_total || 0)).toFixed(2) + ' s')
 					]);
 				});
 				result.innerHTML = '';
 				result.appendChild(E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('三路上传结果')),
+					E('h3', {}, _('3-way Upload Result')),
 					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, mbps.toFixed(2) + ' Mbps (' + (mbps / 8).toFixed(2) + ' MB/s)'),
-					E('p', {}, _('总上传量：') + (bytes / 1048576).toFixed(2) + ' MiB　' + _('接收端点：南京大学')),
+					E('p', {}, _('Total uploaded:') + ' ' + (bytes / 1048576).toFixed(2) + ' MiB  ' + _('Endpoint:') + ' ' + activeUploadUrl()),
 					E('table', { 'class': 'table' }, [
-						E('tr', { 'class': 'tr table-titles' }, [ E('th', {}, '#'), E('th', {}, _('速度')), E('th', {}, 'HTTP'), E('th', {}, _('用时')) ])
+						E('tr', { 'class': 'tr table-titles' }, [ E('th', {}, '#'), E('th', {}, _('Speed')), E('th', {}, 'HTTP'), E('th', {}, _('Time')) ])
 					].concat(rows))
 				]));
 			}).catch(function(err) {
-				if (runId === activeRun) setStatus(_('上传测速失败：') + String(err.message || err), 'error');
+				if (runId === activeRun) setStatus(_('Upload test failed:') + ' ' + String(err.message || err), 'error');
 			});
 		}
 
@@ -278,11 +278,11 @@ return view.extend({
 			var runId = ++activeRun;
 			var targets = activeUrls().slice(0, 5);
 			if (targets.length < 2 || !validNumber(duration, 3, 86400) || !validNumber(maxMb, 0, Number.MAX_SAFE_INTEGER)) {
-				setStatus(_('节点数量或测速参数无效。'), 'error');
+				setStatus(_('Invalid node count or test parameters.'), 'error');
 				return;
 			}
-			if (!confirmLongTest(_('上下行同时测速'))) return;
-			setStatus(_('上下行同时测速中（5 路下载 + 3 路上传）……'), 'notice');
+			if (!confirmLongTest(_('Duplex test (down+up)'))) return;
+			setStatus(_('Duplex test running (5 download + 3 upload streams)...'), 'notice');
 			runJob('linkspeed-duplex', [ duration.value, maxMb.value, activeUploadUrl() ].concat(targets)).then(function(res) {
 				if (runId !== activeRun) return;
 				var down = [], up = [];
@@ -290,7 +290,7 @@ return view.extend({
 					if (line.indexOf('D|') === 0) down.push(parseMetrics(line.substring(2)));
 					if (line.indexOf('U|') === 0) up.push(parseMetrics(line.substring(2)));
 				});
-				if (!down.length || !up.length) throw new Error(_('双向测速返回数据不完整'));
+				if (!down.length || !up.length) throw new Error(_('Incomplete data returned by the duplex test'));
 				var downBytes = down.reduce(function(sum, item) { return sum + Number(item.size_download || 0); }, 0);
 				var upBytes = up.reduce(function(sum, item) { return sum + Number(item.size_download || 0); }, 0);
 				var downElapsed = down.reduce(function(max, item) { return Math.max(max, Number(item.time_total || 0)); }, 0);
@@ -299,62 +299,62 @@ return view.extend({
 				var upMbps = upElapsed > 0 ? upBytes * 8 / upElapsed / 1000000 : 0;
 				result.innerHTML = '';
 				result.appendChild(E('div', { 'class': 'cbi-section' }, [
-					E('h3', {}, _('上下行同时测速结果')),
-					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, _('下载：') + downMbps.toFixed(2) + ' Mbps'),
-					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, _('上传：') + upMbps.toFixed(2) + ' Mbps'),
-					E('p', {}, _('下载量：') + (downBytes / 1048576).toFixed(2) + ' MiB　' + _('上传量：') + (upBytes / 1048576).toFixed(2) + ' MiB'),
-					E('p', {}, _('双向同时测速反映满负载时的链路能力，结果通常低于分开测试。'))
+					E('h3', {}, _('Duplex Test Result')),
+					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, _('Download:') + ' ' + downMbps.toFixed(2) + ' Mbps'),
+					E('p', { 'style': 'font-size:1.35em;font-weight:bold' }, _('Upload:') + ' ' + upMbps.toFixed(2) + ' Mbps'),
+					E('p', {}, _('Downloaded:') + ' ' + (downBytes / 1048576).toFixed(2) + ' MiB  ' + _('Uploaded:') + ' ' + (upBytes / 1048576).toFixed(2) + ' MiB'),
+					E('p', {}, _('Simultaneous bidirectional testing reflects link capacity under full load; results are usually lower than separate tests.'))
 				]));
 			}).catch(function(err) {
-				if (runId === activeRun) setStatus(_('双向测速失败：') + String(err.message || err), 'error');
+				if (runId === activeRun) setStatus(_('Duplex test failed:') + ' ' + String(err.message || err), 'error');
 			});
 		}
 
 		function stopTest() {
 			activeRun++;
-			setStatus(_('正在停止测速……'), 'warning');
+			setStatus(_('Stopping test...'), 'warning');
 			fs.exec('/usr/libexec/linkspeed-stop', []).then(function() {
-				setStatus(_('测速已停止，所有测速连接均已关闭。'), 'warning');
+				setStatus(_('Test stopped; all test connections closed.'), 'warning');
 			}).catch(function(err) {
-				setStatus(_('停止失败：') + String(err.message || err), 'error');
+				setStatus(_('Stop failed:') + ' ' + String(err.message || err), 'error');
 			});
 		}
 
 		function loadHistory() {
-			historyResult.textContent = _('正在读取历史……');
+			historyResult.textContent = _('Loading history...');
 			fs.exec('/usr/libexec/linkspeed-history', [ 'list' ]).then(function(res) {
 				var lines = String(res.stdout || '').trim().split(/\n+/).filter(Boolean);
 				var rows = lines.map(function(line) {
 					var f = line.split('|'), id = f[1], started = Number(f[3]), ended = Number(f[4]);
 					return E('tr', {}, [ E('td', {}, new Date(started * 1000).toLocaleString()), E('td', {}, f[2]),
-						E('td', {}, Math.max(0, ended - started) + _(' 秒')), E('td', {}, f[6] || '0'),
-						E('td', {}, E('button', { 'class': 'btn cbi-button-action', 'click': function() { viewHistory(id); } }, _('查看打点'))) ]);
+						E('td', {}, _('%d seconds').format(Math.max(0, ended - started))), E('td', {}, f[6] || '0'),
+						E('td', {}, E('button', { 'class': 'btn cbi-button-action', 'click': function() { viewHistory(id); } }, _('View samples'))) ]);
 				});
 				historyResult.innerHTML = '';
 				historyResult.appendChild(lines.length ? E('table', { 'class': 'table' }, [ E('tr', { 'class': 'tr table-titles' }, [
-					E('th', {}, _('开始时间')), E('th', {}, _('模式')), E('th', {}, _('时长')), E('th', {}, _('采样点')), E('th', {}, '')
-				]) ].concat(rows)) : E('p', {}, _('暂无测速历史。')));
-			}).catch(function(err) { historyResult.textContent = _('读取历史失败：') + String(err.message || err); });
+					E('th', {}, _('Start time')), E('th', {}, _('Mode')), E('th', {}, _('Duration')), E('th', {}, _('Samples')), E('th', {}, '')
+				]) ].concat(rows)) : E('p', {}, _('No test history yet.')));
+			}).catch(function(err) { historyResult.textContent = _('Failed to load history:') + ' ' + String(err.message || err); });
 		}
 
 		function viewHistory(jobId) {
-			historyResult.textContent = _('正在读取秒级打点……');
+			historyResult.textContent = _('Loading per-second samples...');
 			fs.exec('/usr/libexec/linkspeed-history', [ 'detail', jobId ]).then(function(res) {
 				var points = String(res.stdout || '').trim().split(/\n+/).filter(function(line) { return line.indexOf('S|') === 0; }).map(function(line) {
 					var f = line.split('|'), dt = Math.max(Number(f[2]) || 1, 1);
 					return { time: Number(f[1]), down: Number(f[3]) * 8 / dt / 1000000, up: Number(f[4]) * 8 / dt / 1000000 };
 				});
-				if (!points.length) throw new Error(_('该记录没有速度采样点'));
+				if (!points.length) throw new Error(_('This record has no speed samples'));
 				var peakDown = 0, peakUp = 0, sumDown = 0, sumUp = 0;
 				points.forEach(function(p) { peakDown = Math.max(peakDown, p.down); peakUp = Math.max(peakUp, p.up); sumDown += p.down; sumUp += p.up; });
 				var canvas = E('canvas', { 'width': '900', 'height': '320', 'style': 'width:100%;max-width:1000px;height:320px;background:#202020;border-radius:4px;cursor:crosshair' });
-				var pointInfo = E('p', { 'style': 'min-height:1.5em;font-weight:bold;color:#ddd' }, _('点击曲线查看某一秒的实际数据。'));
+				var pointInfo = E('p', { 'style': 'min-height:1.5em;font-weight:bold;color:#ddd' }, _('Click the curve to inspect a specific second.'));
 				historyResult.innerHTML = '';
 				historyResult.appendChild(E('div', {}, [
-					E('p', { 'style': 'font-size:1.15em;font-weight:bold' }, _('平均下载：') + (sumDown / points.length).toFixed(2) + ' Mbps　' + _('平均上传：') + (sumUp / points.length).toFixed(2) + ' Mbps'),
-					E('p', {}, _('峰值下载：') + peakDown.toFixed(2) + ' Mbps　' + _('峰值上传：') + peakUp.toFixed(2) + ' Mbps　' + _('采样点：') + points.length),
+					E('p', { 'style': 'font-size:1.15em;font-weight:bold' }, _('Avg download:') + ' ' + (sumDown / points.length).toFixed(2) + ' Mbps  ' + _('Avg upload:') + ' ' + (sumUp / points.length).toFixed(2) + ' Mbps'),
+					E('p', {}, _('Peak download:') + ' ' + peakDown.toFixed(2) + ' Mbps  ' + _('Peak upload:') + ' ' + peakUp.toFixed(2) + ' Mbps  ' + _('Samples:') + ' ' + points.length),
 					canvas, pointInfo,
-					E('p', { 'class': 'cbi-value-description' }, _('紫色：下载　青色：上传　每个原始点为一秒采样；长记录仅在绘图时自动抽样。'))
+					E('p', { 'class': 'cbi-value-description' }, _('Purple: download') + '  ' + _('Cyan: upload') + '  ' + _('Each raw point is a 1-second sample; long records are downsampled only when drawing.'))
 				]));
 				var ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height, pad = 34;
 				var max = Math.max(10, peakDown, peakUp) * 1.1, step = Math.max(1, Math.ceil(points.length / 1200)), drawn = [];
@@ -381,9 +381,9 @@ return view.extend({
 					ctx.strokeStyle = '#eee'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
 					function marker(y, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.stroke(); }
 					marker(downY, '#9b87f5'); marker(upY, '#58d5d2');
-					pointInfo.textContent = new Date(p.time * 1000).toLocaleString() + '　' + _('下载：') + p.down.toFixed(2) + ' Mbps　' + _('上传：') + p.up.toFixed(2) + ' Mbps';
+					pointInfo.textContent = new Date(p.time * 1000).toLocaleString() + '  ' + _('Download:') + ' ' + p.down.toFixed(2) + ' Mbps  ' + _('Upload:') + ' ' + p.up.toFixed(2) + ' Mbps';
 				});
-			}).catch(function(err) { historyResult.textContent = _('读取历史失败：') + String(err.message || err); });
+			}).catch(function(err) { historyResult.textContent = _('Failed to load history:') + ' ' + String(err.message || err); });
 		}
 
 		function loadHistory() {
@@ -392,36 +392,36 @@ return view.extend({
 					var f = line.split('|'), jobId = f[1];
 					return E('tr', {}, [ E('td', {}, new Date(Number(f[3]) * 1000).toLocaleString()),
 						E('td', {}, f[2]), E('td', {}, f[6] || '0'),
-						E('td', {}, E('button', { 'class': 'btn cbi-button-action', 'click': function() { viewHistory(jobId); } }, _('查看打点'))) ]);
+						E('td', {}, E('button', { 'class': 'btn cbi-button-action', 'click': function() { viewHistory(jobId); } }, _('View samples'))) ]);
 				});
 				historyResult.innerHTML = '';
 				historyResult.appendChild(E('table', { 'class': 'table' }, [ E('tr', { 'class': 'tr table-titles' }, [
-					E('th', {}, _('开始时间')), E('th', {}, _('模式')), E('th', {}, _('采样点')), E('th', {}, _('操作'))
+					E('th', {}, _('Start time')), E('th', {}, _('Mode')), E('th', {}, _('Samples')), E('th', {}, _('Actions'))
 				]) ].concat(rows)));
-			}).catch(function(err) { historyResult.textContent = _('读取历史失败：') + String(err.message || err); });
+			}).catch(function(err) { historyResult.textContent = _('Failed to load history:') + ' ' + String(err.message || err); });
 		}
 
 		return E([], [
-			E('h2', {}, _('网络测速')),
-			E('div', { 'class': 'cbi-map-descr' }, _('即时测速工具，无需保存应用。测速流量由路由器 WAN 出口产生。')),
+			E('h2', {}, _('Network Speed Test')),
+			E('div', { 'class': 'cbi-map-descr' }, _('Instant speed test tool; no save & apply needed. Test traffic is generated by the router WAN egress.')),
 			E('div', { 'class': 'cbi-section' }, [
-				E('h3', {}, _('测速参数')),
-				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('节点组')), E('div', { 'class': 'cbi-value-field' }, profile) ]),
-				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('单节点选择')), E('div', { 'class': 'cbi-value-field' }, selected) ]),
-				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('自定义临时链接')), E('div', { 'class': 'cbi-value-field' }, custom) ]),
-				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('最长时长（秒）')), E('div', { 'class': 'cbi-value-field' }, duration) ]),
-				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('每方向最大总流量（MB）')), E('div', { 'class': 'cbi-value-field' }, [ maxMb, maxMbHint ]) ]),
-				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('历史最多保留（次）')), E('div', { 'class': 'cbi-value-field' }, [ historyLimit, E('div', { 'class': 'cbi-value-description' }, _('每次完整测速算一条，范围 1–200；完成后一次性写入硬盘。')) ]) ]),
+				E('h3', {}, _('Test Parameters')),
+				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('Node group')), E('div', { 'class': 'cbi-value-field' }, profile) ]),
+				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('Single node selection')), E('div', { 'class': 'cbi-value-field' }, selected) ]),
+				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('Custom temporary link')), E('div', { 'class': 'cbi-value-field' }, custom) ]),
+				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('Max duration (seconds)')), E('div', { 'class': 'cbi-value-field' }, duration) ]),
+				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('Max total traffic per direction (MB)')), E('div', { 'class': 'cbi-value-field' }, [ maxMb, maxMbHint ]) ]),
+				E('div', { 'class': 'cbi-value' }, [ E('label', { 'class': 'cbi-value-title' }, _('History entries to keep')), E('div', { 'class': 'cbi-value-field' }, [ historyLimit, E('div', { 'class': 'cbi-value-description' }, _('Each completed test counts as one entry, range 1-200; written to storage once finished.')) ]) ]),
 				E('div', { 'class': 'cbi-page-actions' }, [
-					E('button', { 'class': 'btn cbi-button-action', 'click': runSingle }, _('单节点测速')),
-					' ', E('button', { 'class': 'btn cbi-button-positive', 'click': runMulti }, _('五节点并发测速')),
-					' ', E('button', { 'class': 'btn cbi-button-action', 'click': runUpload }, _('三路上传测速')),
-					' ', E('button', { 'class': 'btn cbi-button-positive', 'click': runDuplex }, _('上下行同时测速')),
-					' ', E('button', { 'class': 'btn cbi-button-negative', 'click': stopTest }, _('立即停止'))
+					E('button', { 'class': 'btn cbi-button-action', 'click': runSingle }, _('Single-node test')),
+					' ', E('button', { 'class': 'btn cbi-button-positive', 'click': runMulti }, _('5-node concurrent test')),
+					' ', E('button', { 'class': 'btn cbi-button-action', 'click': runUpload }, _('3-way upload test')),
+					' ', E('button', { 'class': 'btn cbi-button-positive', 'click': runDuplex }, _('Duplex test (down+up)')),
+					' ', E('button', { 'class': 'btn cbi-button-negative', 'click': stopTest }, _('Stop now'))
 				])
 			]),
 			result,
-			E('div', { 'class': 'cbi-section' }, [ E('h3', {}, _('测速历史')), E('button', { 'class': 'btn cbi-button-action', 'click': loadHistory }, _('刷新历史')), historyResult ])
+			E('div', { 'class': 'cbi-section' }, [ E('h3', {}, _('Test History')), E('button', { 'class': 'btn cbi-button-action', 'click': loadHistory }, _('Refresh history')), historyResult ])
 		]);
 	}
 });

@@ -2,7 +2,7 @@
 
 pidfile="/var/run/linkspeed-test.pids"
 [ -f "$pidfile" ] || {
-	echo '{"stopped":false,"message":"没有正在运行的测速任务"}'
+	echo '{"stopped":false,"message":"No running speed test"}'
 	exit 0
 }
 

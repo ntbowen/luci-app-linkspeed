@@ -6,15 +6,15 @@ shift 2
 
 count=$#
 [ "$count" -ge 2 ] && [ "$count" -le 10 ] || {
-	echo '并发测速需要 2–10 个链接' >&2
+	echo 'Concurrent test requires 2-10 URLs' >&2
 	exit 2
 }
 
 case "$max_total_mb" in
-	''|*[!0-9]*) echo '最大下载量必须是整数' >&2; exit 2 ;;
+	''|*[!0-9]*) echo 'Max download size must be an integer' >&2; exit 2 ;;
 esac
 
-# 将总流量上限均分到各连接，向上取整避免变成 0 MB。
+# Split the total cap evenly across connections, rounding up to avoid 0 MB.
 per_mb=$(( (max_total_mb + count - 1) / count ))
 tmpdir="/tmp/linkspeed-multi.$$"
 pidfile="${LINKSPEED_PIDFILE:-/var/run/linkspeed-test.pids}"

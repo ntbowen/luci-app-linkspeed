@@ -6,22 +6,22 @@ max_mb="${3:-100}"
 
 case "$url" in
 	http://*|https://*) ;;
-	*) echo '测速地址必须以 http:// 或 https:// 开头' >&2; exit 2 ;;
+	*) echo 'Test URL must start with http:// or https://' >&2; exit 2 ;;
 esac
 
 case "$duration" in
-	''|*[!0-9]*) echo '测速时长必须是整数' >&2; exit 2 ;;
+	''|*[!0-9]*) echo 'Duration must be an integer' >&2; exit 2 ;;
 esac
 case "$max_mb" in
-	''|*[!0-9]*) echo '最大下载量必须是整数' >&2; exit 2 ;;
+	''|*[!0-9]*) echo 'Max download size must be an integer' >&2; exit 2 ;;
 esac
 
 [ "$duration" -ge 3 ] && [ "$duration" -le 86400 ] || {
-	echo '测速时长范围为 3–86400 秒' >&2
+	echo 'Duration must be between 3 and 86400 seconds' >&2
 	exit 2
 }
 [ "$max_mb" -ge 0 ] || {
-	echo '最大下载量必须大于或等于 0 MB' >&2
+	echo 'Max download size must be greater than or equal to 0 MB' >&2
 	exit 2
 }
 
@@ -48,12 +48,12 @@ wait "$curl_pid"
 curl_code=$?
 result="$(cat "$tmpbase.out")"
 
-# curl 在达到 --max-time 时返回 28，但此时统计数据仍然有效。
+# curl returns 28 when --max-time is reached, but the statistics are still valid.
 if [ -n "$result" ]; then
 	printf '%s\n' "$result"
 	exit 0
 fi
 
-echo "curl 测速失败（代码 $curl_code）" >&2
+echo "curl speed test failed (code $curl_code)" >&2
 cat "$tmpbase.err" >&2
 exit "$curl_code"

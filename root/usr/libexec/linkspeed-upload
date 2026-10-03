@@ -6,10 +6,10 @@ max_mb="${3:-100}"
 
 case "$url" in
 	http://*|https://*) ;;
-	*) echo '上传地址必须以 http:// 或 https:// 开头' >&2; exit 2 ;;
+	*) echo 'Upload URL must start with http:// or https://' >&2; exit 2 ;;
 esac
 case "$duration:$max_mb" in
-	*[!0-9:]*) echo '测速参数必须是整数' >&2; exit 2 ;;
+	*[!0-9:]*) echo 'Test parameters must be integers' >&2; exit 2 ;;
 esac
 [ "$duration" -ge 3 ] && [ "$duration" -le 86400 ] || exit 2
 [ "$max_mb" -ge 0 ] || exit 2
@@ -43,6 +43,6 @@ if [ -n "$result" ]; then
 	printf '%s\n' "$result"
 	exit 0
 fi
-echo "curl 上传测速失败（代码 $curl_code）" >&2
+echo "curl upload test failed (code $curl_code)" >&2
 cat "$tmpbase.err" >&2
 exit "$curl_code"

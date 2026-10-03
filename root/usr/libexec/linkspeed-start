@@ -5,13 +5,13 @@ program="$2"
 history_limit="$3"
 shift 3
 
-case "$job_id" in ''|*[!0-9]*) echo '任务编号无效' >&2; exit 2 ;; esac
+case "$job_id" in ''|*[!0-9]*) echo 'Invalid job ID' >&2; exit 2 ;; esac
 case "$program" in
 	linkspeed-test|linkspeed-test-multi|linkspeed-upload-multi|linkspeed-duplex) ;;
-	*) echo '测速程序无效' >&2; exit 2 ;;
+	*) echo 'Invalid test program' >&2; exit 2 ;;
 esac
-case "$history_limit" in ''|*[!0-9]*) echo '历史保留数量无效' >&2; exit 2 ;; esac
-[ "$history_limit" -ge 1 ] && [ "$history_limit" -le 200 ] || { echo '历史保留范围为 1–200 次' >&2; exit 2; }
+case "$history_limit" in ''|*[!0-9]*) echo 'Invalid history limit' >&2; exit 2 ;; esac
+[ "$history_limit" -ge 1 ] && [ "$history_limit" -le 200 ] || { echo 'History limit must be between 1 and 200' >&2; exit 2; }
 if [ "$(uci -q get linkspeed.config.history_limit)" != "$history_limit" ]; then
 	uci set linkspeed.config.history_limit="$history_limit"
 	uci commit linkspeed

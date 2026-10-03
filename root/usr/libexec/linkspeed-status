@@ -1,9 +1,9 @@
 #!/bin/sh
 
 job_id="$1"
-case "$job_id" in ''|*[!0-9]*) echo 'ERROR'; echo '任务编号无效'; exit 2 ;; esac
+case "$job_id" in ''|*[!0-9]*) echo 'ERROR'; echo 'Invalid job ID'; exit 2 ;; esac
 jobdir="/tmp/linkspeed-job-$job_id"
-[ -f "$jobdir/state" ] || { echo 'ERROR'; echo '找不到测速任务'; exit 1; }
+[ -f "$jobdir/state" ] || { echo 'ERROR'; echo 'Test job not found'; exit 1; }
 
 state="$(cat "$jobdir/state")"
 rx="$(cat /sys/class/net/wwan0/statistics/rx_bytes 2>/dev/null || echo 0)"
@@ -12,5 +12,5 @@ case "$state" in
 	running) echo "RUNNING|$rx|$tx" ;;
 	done) echo "DONE|$rx|$tx"; cat "$jobdir/output" ;;
 	error) echo "ERROR|$rx|$tx"; cat "$jobdir/error" ;;
-	*) echo 'ERROR'; echo '测速任务状态无效' ;;
+	*) echo 'ERROR'; echo 'Invalid job state' ;;
 esac
