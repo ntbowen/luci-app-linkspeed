@@ -9,6 +9,7 @@ config linkspeed 'config'
 	list global_url 'https://speed.hetzner.de/1GB.bin'
 	list global_url 'https://download.thinkbroadband.com/1GB.zip'
 	list global_url 'https://speedtest.tele2.net/1GB.zip'
+	# option wan_device 'wwan0'  # override auto-detected WAN device used for live counters
 	option cn_upload_url 'https://test.nju.edu.cn/backend/empty.php'
 	option global_upload_url 'https://speed.cloudflare.com/__up'
 	option duration '15'

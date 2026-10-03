@@ -8,11 +8,15 @@ history_limit="$3"
 shift 3
 jobdir="/tmp/linkspeed-job-$job_id"
 
+wan_device="$(uci -q get linkspeed.config.wan_device)"
+[ -n "$wan_device" ] || wan_device="$(ubus call network.interface.wan status 2>/dev/null | jsonfilter -e '@.l3_device' 2>/dev/null)"
+[ -n "$wan_device" ] || wan_device=wwan0
+
 started="$(date +%s)"
 samples="$jobdir/samples"
 : > "$samples"
-prev_rx="$(cat /sys/class/net/wwan0/statistics/rx_bytes 2>/dev/null || echo 0)"
-prev_tx="$(cat /sys/class/net/wwan0/statistics/tx_bytes 2>/dev/null || echo 0)"
+prev_rx="$(cat "/sys/class/net/$wan_device/statistics/rx_bytes" 2>/dev/null || echo 0)"
+prev_tx="$(cat "/sys/class/net/$wan_device/statistics/tx_bytes" 2>/dev/null || echo 0)"
 prev_time="$started"
 
 "/usr/libexec/$program" "$@" > "$jobdir/output" 2> "$jobdir/error" &
@@ -20,8 +24,8 @@ test_pid=$!
 while kill -0 "$test_pid" 2>/dev/null; do
 	sleep 1
 	now="$(date +%s)"
-	rx="$(cat /sys/class/net/wwan0/statistics/rx_bytes 2>/dev/null || echo "$prev_rx")"
-	tx="$(cat /sys/class/net/wwan0/statistics/tx_bytes 2>/dev/null || echo "$prev_tx")"
+	rx="$(cat "/sys/class/net/$wan_device/statistics/rx_bytes" 2>/dev/null || echo "$prev_rx")"
+	tx="$(cat "/sys/class/net/$wan_device/statistics/tx_bytes" 2>/dev/null || echo "$prev_tx")"
 	dt=$((now - prev_time)); [ "$dt" -gt 0 ] || dt=1
 	printf 'S|%s|%s|%s|%s\n' "$now" "$dt" "$((rx - prev_rx))" "$((tx - prev_tx))" >> "$samples"
 	prev_rx="$rx"; prev_tx="$tx"; prev_time="$now"

@@ -6,8 +6,11 @@ jobdir="/tmp/linkspeed-job-$job_id"
 [ -f "$jobdir/state" ] || { echo 'ERROR'; echo 'Test job not found'; exit 1; }
 
 state="$(cat "$jobdir/state")"
-rx="$(cat /sys/class/net/wwan0/statistics/rx_bytes 2>/dev/null || echo 0)"
-tx="$(cat /sys/class/net/wwan0/statistics/tx_bytes 2>/dev/null || echo 0)"
+wan_device="$(uci -q get linkspeed.config.wan_device)"
+[ -n "$wan_device" ] || wan_device="$(ubus call network.interface.wan status 2>/dev/null | jsonfilter -e '@.l3_device' 2>/dev/null)"
+[ -n "$wan_device" ] || wan_device=wwan0
+rx="$(cat "/sys/class/net/$wan_device/statistics/rx_bytes" 2>/dev/null || echo 0)"
+tx="$(cat "/sys/class/net/$wan_device/statistics/tx_bytes" 2>/dev/null || echo 0)"
 case "$state" in
 	running) echo "RUNNING|$rx|$tx" ;;
 	done) echo "DONE|$rx|$tx"; cat "$jobdir/output" ;;
